@@ -35,11 +35,11 @@ The tests need to be run from the root directory
 To build grpc for debugging use:
   cmake -E env CXXFLAGS="-g3 -O0" cmake -DgRPC_BUILD_TESTS=ON -DgRPC_SSL_PROVIDER=wolfssl ../..
 ---
- cmake/ssl.cmake                               | 44 +++++++++++++++++++
- .../external/aws_request_signer.cc            | 12 ++---
- src/core/tsi/ssl_transport_security.cc        | 22 ++++++++++
- test/core/tsi/ssl_transport_security_test.cc  | 20 ++++++++-
- 4 files changed, 91 insertions(+), 7 deletions(-)
+ cmake/ssl.cmake                                    | 44 ++++++++++++++++++++++
+ .../credentials/external/aws_request_signer.cc     | 12 +++---
+ src/core/tsi/ssl_transport_security.cc             | 22 +++++++++++
+ test/core/tsi/ssl_transport_security_test.cc       | 11 +++++-
+ 4 files changed, 82 insertions(+), 7 deletions(-)
 
 diff --git a/cmake/ssl.cmake b/cmake/ssl.cmake
 index bf43e47588..a715ef5719 100644
@@ -196,36 +196,10 @@ index 77fc1f3834..3c421070bd 100644
        }
  #endif
 diff --git a/test/core/tsi/ssl_transport_security_test.cc b/test/core/tsi/ssl_transport_security_test.cc
-index dae69e58c7..fdc2ee4bce 100644
+index dae69e5..0b41ee0 100644
 --- a/test/core/tsi/ssl_transport_security_test.cc
 +++ b/test/core/tsi/ssl_transport_security_test.cc
-@@ -220,8 +220,13 @@ static void check_verified_root_cert_subject(
-       tsi_peer_get_property_by_name(
-           peer, TSI_X509_VERIFIED_ROOT_CERT_SUBECT_PEER_PROPERTY);
-   ASSERT_NE(verified_root_cert_subject, nullptr);
-+#ifndef OPENSSL_IS_WOLFSSL
-   const char* expected_match =
-       "CN=testca,O=Internet Widgits Pty Ltd,ST=Some-State,C=AU";
-+#else
-+  const char* expected_match =
-+      "CN=testca, O=Internet Widgits Pty Ltd, ST=Some-State, C=AU";
-+#endif
-   ASSERT_EQ(memcmp(verified_root_cert_subject->value.data, expected_match,
-                    verified_root_cert_subject->value.length),
-             0);
-@@ -1117,7 +1122,11 @@ void ssl_tsi_test_extract_x509_subject_names() {
-   size_t expected_property_count = 22;
-   ASSERT_EQ(peer.property_count, expected_property_count);
-   // Check subject
-+#ifndef OPENSSL_IS_WOLFSSL
-   const char* expected_subject = "CN=xpigors,OU=Google,L=SF,ST=CA,C=US";
-+#else
-+  const char* expected_subject = "CN=xpigors, OU=Google, L=SF, ST=CA, C=US";
-+#endif
-   const tsi_peer_property* property =
-       tsi_peer_get_property_by_name(&peer, TSI_X509_SUBJECT_PEER_PROPERTY);
-   ASSERT_NE(property, nullptr);
-@@ -1256,7 +1265,13 @@ void ssl_tsi_test_do_handshake_with_custom_bio_pair() {
+@@ -1256,7 +1256,13 @@ void ssl_tsi_test_do_handshake_with_custom_bio_pair() {
        reinterpret_cast<ssl_tsi_test_fixture*>(fixture);
  #if OPENSSL_VERSION_NUMBER >= 0x10100000
    ssl_fixture->network_bio_buf_size = TSI_TEST_DEFAULT_BUFFER_SIZE;
@@ -240,7 +214,7 @@ index dae69e58c7..fdc2ee4bce 100644
  #endif
    ssl_fixture->force_client_auth = true;
    tsi_test_do_handshake(fixture);
-@@ -1279,8 +1294,11 @@ TEST(SslTransportSecurityTest, MainTest) {
+@@ -1279,8 +1285,11 @@ TEST(SslTransportSecurityTest, MainTest) {
        ssl_tsi_test_do_handshake();
        ssl_tsi_test_do_handshake_with_root_store();
        ssl_tsi_test_do_handshake_skipping_server_certificate_verification();
