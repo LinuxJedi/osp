@@ -115,7 +115,7 @@ index 07a05d7..1b3c253 100644
      FIND_PACKAGE(GnuTLS "3.4.2" REQUIRED)
      IF(GNUTLS_FOUND)
 diff --git a/libmariadb/libmariadb/secure/openssl.c b/libmariadb/libmariadb/secure/openssl.c
-index 1c24554..6b585c6 100644
+index 1c24554..862b044 100644
 --- a/libmariadb/libmariadb/secure/openssl.c
 +++ b/libmariadb/libmariadb/secure/openssl.c
 @@ -34,7 +34,7 @@
@@ -207,7 +207,7 @@ index 1c24554..6b585c6 100644
    return 0;
  
  error:
-@@ -414,6 +429,47 @@ static int ma_tls_set_certs(MYSQL *mysql, SSL_CTX *ctx)
+@@ -414,6 +429,45 @@ static int ma_tls_set_certs(MYSQL *mysql, SSL_CTX *ctx)
    return 1;
  }
  
@@ -229,9 +229,8 @@ index 1c24554..6b585c6 100644
 +                           int size, void *ctx)
 +{
 +  MARIADB_PVIO *pvio= (MARIADB_PVIO *)ctx;
-+  struct mysql_async_context *async= pvio->mysql->options.extension->async_context;
 +  ssize_t ret;
-+  if (async && async->active)
++  if (IS_PVIO_ASYNC_ACTIVE(pvio))
 +    ret= pvio->methods->async_read(pvio, (uchar *)buf, size);
 +  else
 +    ret= pvio->methods->read(pvio, (uchar *)buf, size);
@@ -242,9 +241,8 @@ index 1c24554..6b585c6 100644
 +                           int size, void *ctx)
 +{
 +  MARIADB_PVIO *pvio= (MARIADB_PVIO *)ctx;
-+  struct mysql_async_context *async= pvio->mysql->options.extension->async_context;
 +  ssize_t ret;
-+  if (async && async->active)
++  if (IS_PVIO_ASYNC_ACTIVE(pvio))
 +    ret= pvio->methods->async_write(pvio, (const uchar *)buf, size);
 +  else
 +    ret= pvio->methods->write(pvio, (const uchar *)buf, size);
@@ -255,7 +253,7 @@ index 1c24554..6b585c6 100644
  void *ma_tls_init(MYSQL *mysql)
  {
    SSL *ssl= NULL;
-@@ -430,6 +486,10 @@ void *ma_tls_init(MYSQL *mysql)
+@@ -430,6 +484,10 @@ void *ma_tls_init(MYSQL *mysql)
    if (!(ctx= SSL_CTX_new(SSLv23_client_method())))
  #endif
      goto error;
@@ -266,7 +264,7 @@ index 1c24554..6b585c6 100644
    if (mysql->options.extension) 
      options= ma_tls_version_options(mysql->options.extension->tls_version);
    SSL_CTX_set_options(ctx, options ? options : default_options);
-@@ -486,15 +546,20 @@ my_bool ma_tls_connect(MARIADB_TLS *ctls)
+@@ -486,15 +544,20 @@ my_bool ma_tls_connect(MARIADB_TLS *ctls)
    SSL_set_fd(ssl, (int)mysql_get_socket(mysql));
  #endif
  
@@ -289,7 +287,7 @@ index 1c24554..6b585c6 100644
          try_connect= 0;
        break;
      default:
-@@ -593,7 +658,7 @@ ssize_t ma_tls_read(MARIADB_TLS *ctls, const uchar* buffer, size_t length)
+@@ -593,7 +656,7 @@ ssize_t ma_tls_read(MARIADB_TLS *ctls, const uchar* buffer, size_t length)
      int error= SSL_get_error((SSL *)ctls->ssl, rc);
      if (error != SSL_ERROR_WANT_READ)
        break;
@@ -298,7 +296,7 @@ index 1c24554..6b585c6 100644
        break;
    }
    if (rc <= 0)
-@@ -614,7 +679,7 @@ ssize_t ma_tls_write(MARIADB_TLS *ctls, const uchar* buffer, size_t length)
+@@ -614,7 +677,7 @@ ssize_t ma_tls_write(MARIADB_TLS *ctls, const uchar* buffer, size_t length)
      int error= SSL_get_error((SSL *)ctls->ssl, rc);
      if (error != SSL_ERROR_WANT_WRITE)
        break;
